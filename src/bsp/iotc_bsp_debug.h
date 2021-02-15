@@ -17,8 +17,6 @@
 #ifndef __IOTC_BSP_DEBUG__
 #define __IOTC_BSP_DEBUG__
 
-#define BSP_DEBUG_LOG 0
-
 #ifndef IOTC_DEBUG_PRINTF
 #include <stdio.h>
 #define __iotc_printf(...) \
