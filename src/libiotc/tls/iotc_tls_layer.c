@@ -216,9 +216,10 @@ static iotc_state_t send_handler(void* context, void* data,
   /* cook temporary data before entering the coroutine scope */
   iotc_bsp_tls_state_t ret = IOTC_BSP_TLS_STATE_WRITE_ERROR;
   int bytes_written = 0;
-  const size_t offset = layer_data->to_write_buffer->curr_pos;
-  const size_t size_left = layer_data->to_write_buffer->capacity -
-                           layer_data->to_write_buffer->curr_pos;
+  size_t offset = layer_data->to_write_buffer->curr_pos;
+  size_t size_left = layer_data->to_write_buffer->capacity -
+                     layer_data->to_write_buffer->curr_pos;
+  iotc_debug_format("offset=%d size_left=%d", offset, size_left);
 
   /* coroutine scope begins */
   IOTC_CR_START(layer_data->tls_layer_send_cs);
@@ -226,6 +227,8 @@ static iotc_state_t send_handler(void* context, void* data,
   /* this loop can be break only by success, error state is being checked inside
    */
   do {
+    bytes_written = 0;
+    iotc_debug_format("calling iotc_bsp_tls_write() with offset %d", offset);
     /* passes data and a size to bsp tls write function */
     ret = iotc_bsp_tls_write(layer_data->tls_context,
                              layer_data->to_write_buffer->data_ptr + offset,
@@ -233,6 +236,8 @@ static iotc_state_t send_handler(void* context, void* data,
 
     if (bytes_written > 0) {
       layer_data->to_write_buffer->curr_pos += bytes_written;
+      size_left -= bytes_written;
+      offset += bytes_written;
     }
 
     /* while bsp tls is unable to read let's exit the coroutine */
@@ -245,7 +250,7 @@ static iotc_state_t send_handler(void* context, void* data,
       goto err_handling;
     }
 
-  } while (ret != IOTC_BSP_TLS_STATE_OK);
+  } while (ret != IOTC_BSP_TLS_STATE_OK || size_left > 0);
 
   /* free the memory */
   iotc_free_desc(&layer_data->to_write_buffer);
